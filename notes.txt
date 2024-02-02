@@ -1,0 +1,9 @@
+0.5, clean data statistically
+1, load in a pd df,
+2, run analysis
+3, record potential opportunities in another pd df
+rerun 1 to 3
+
+figure out all available pairs. load them in a pandas data frame, then update the dataframe in real time, then run analysis
+
+how to keep track of the permutations already made
