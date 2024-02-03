@@ -24,15 +24,6 @@ class DataLoader:
             "symbol": symbol
         }
         self.queue.put(item)
-
-    def get_init_data(self, parent_pair, symbol):
-        parent_pair_obj = self.session.query(ParentPair).filter(ParentPair.symbol==parent_pair).first()
-        
-        child_pair_obj = self.session.query(ChildPair).filter(
-            (ChildPair.symbol==symbol)
-            & (ChildPair.parent_pair_id==parent_pair_obj.id)
-        ).first()
-        return (parent_pair, child_pair_obj)
     
     def store_init_data(self, parent_pair, symbol):
         parent_pair_obj = self.session.query(ParentPair).filter(ParentPair.symbol==parent_pair).first()
@@ -93,7 +84,6 @@ class DataLoader:
             if item_type == "init":
                 parent_pair = item.get("parent_pair", None)
                 symbol = item.get("symbol", None)
-                self.get_init_data(parent_pair, symbol)
                 self.store_init_data(parent_pair=parent_pair, symbol=symbol)
             
             elif item_type == "update":
