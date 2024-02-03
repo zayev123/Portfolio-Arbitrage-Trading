@@ -37,6 +37,6 @@ class DataExtractor:
             sub_pairs_list = [pair_A, pair_B, pair_C]
             for sub_pair in sub_pairs_list:
                 endpoint = f"{self.base_sckt}/{sub_pair.lower()}@bookTicker"
-                sub_thread = WebSocketThread(endpoint, sub_pair, parent_pair)
+                sub_thread = WebSocketThread(endpoint, sub_pair, pairing)
                 sub_thread.start()
                 parent_pair[sub_pair] = sub_thread

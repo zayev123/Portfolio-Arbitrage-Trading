@@ -1,8 +1,11 @@
-import json
 import threading
-
 import websocket
+import json
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
+from models import ChildPair, ParentPair
 
 class WebSocketThread(threading.Thread):
     def __init__(self, endpoint, symbol, parent_pair):
@@ -16,22 +19,69 @@ class WebSocketThread(threading.Thread):
         )
         self.symbol = symbol
         self.parent_pair = parent_pair
-        self.updates = []  # List to store updates
+        self.updates = []
+
+        # Create SQLite database and tables
+        engine = create_engine('sqlite:///Cryptos.db', echo=False)
+        Session = sessionmaker(bind=engine)
+        self.session = Session()
+        self.store_init_data()
+
+        # Insert parent pair into the parent_pairs table
+        # print("my_parent_pair", parent_pair)
+        
+    def store_init_data(self):
+        parent_pair_obj = self.session.query(ParentPair).filter(ParentPair.symbol==self.parent_pair).first()
+        if not parent_pair_obj:
+            parent_pair_obj = ParentPair(symbol=self.parent_pair)
+            self.session.add(parent_pair_obj)
+            self.session.commit()
+            parent_pair_obj = self.session.query(ParentPair).filter(ParentPair.symbol==self.parent_pair).first()
+        self.parent_pair_obj = parent_pair_obj
+        
+        child_pair_obj = self.session.query(ChildPair).filter(
+            (ChildPair.symbol==self.symbol)
+            & (ChildPair.parent_pair_id==parent_pair_obj.id)
+        ).first()
+        if not child_pair_obj:
+            child_pair_obj = ChildPair(
+                symbol=self.symbol,
+                parent_pair_id = parent_pair_obj.id,
+            )
+            self.session.add(child_pair_obj)
+            self.session.commit()
+            child_pair_obj = self.session.query(ChildPair).filter(
+                (ChildPair.symbol==self.symbol)
+                & (ChildPair.parent_pair_id==parent_pair_obj.id)
+            ).first()
+        self.child_pair_obj = child_pair_obj
 
     def on_open(self, ws):
         print(f"Connected {self.symbol}")
 
     def on_message(self, ws, message):
         update = json.loads(message)
-        self.updates.append(update)
-        # print(f"New update: {update}")
-        # You can perform additional actions or processing here
+        self.store_data(update)
+
+    def store_data(self, update):
+
+        # Extract data from the message
+        best_bid_price = float(update['b'])
+        best_ask_price = float(update['a'])
+
+        if self.child_pair_obj:
+            self.child_pair_obj.best_bid_price = best_bid_price
+            self.child_pair_obj.best_ask_price = best_ask_price
+            self.session.add(self.child_pair_obj)
+            self.session.commit()
+
 
     def on_error(self, ws, error):
         print(f"Error: {error}")
 
     def on_close(self, ws, close_status_code, close_msg):
         print(f"Connection close: {close_status_code} - {close_msg}")
+        self.session.close()
 
     def run(self):
         self.ws.run_forever()

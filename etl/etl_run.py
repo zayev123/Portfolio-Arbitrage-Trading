@@ -22,7 +22,3 @@ class ETLRun:
                 print(f"stopping {sub_pair}")
             print("")
 
-        # for thread_key, thread in threads.items():
-        #     thread.join()
-        #     print(f"joining {thread_key}")
-
