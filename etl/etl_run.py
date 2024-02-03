@@ -3,8 +3,8 @@ from etl.data_transformer import DataTransformer
 
 
 class ETLRun:
-    def __init__(self, stop_event, pairs_limit, data_loader):
-        self.extractor = DataExtractor(stop_event, data_loader=data_loader)
+    def __init__(self, stop_event, pairs_limit):
+        self.extractor = DataExtractor(stop_event)
         self.transformer = DataTransformer(self.extractor.symbols_data)
         pairs_list = list(self.transformer.combinations_dict.keys())
         self.chosen_pairs = pairs_list[0:pairs_limit]

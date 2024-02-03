@@ -26,8 +26,11 @@ class WebSocketThread(threading.Thread):
         engine = create_engine('sqlite:///Cryptos.db', echo=False, connect_args={'check_same_thread': False})
         Session = sessionmaker(bind=engine)
         self.session = Session()
-        self.data_loader = data_loader
-        self.data_loader.queue_init_data(self.parent_pair, self.symbol)
+        if not data_loader:
+            self.data_loader = DataLoader()
+        else:
+            self.data_loader = data_loader
+        self.data_loader.store_init_data(self.parent_pair, self.symbol)
 
         # Insert parent pair into the parent_pairs table
         # print("my_parent_pair", parent_pair)
@@ -63,7 +66,7 @@ class WebSocketThread(threading.Thread):
 
     def on_message(self, ws, message):
         update = json.loads(message)
-        self.data_loader.queue_latest_data(self.parent_pair, self.symbol, update)
+        self.data_loader.store_latest_data(self.parent_pair, self.symbol, update)
         # self.store_data(update)
 
     # def store_data(self, update):

@@ -1,20 +1,14 @@
 import requests
 
 from socket_builder import WebSocketThread
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 class DataExtractor:
-    def __init__(self, stop_event, data_loader):
+    def __init__(self, stop_event):
         self.symbols_data = None
         self.get_symbols()
         self.pair_sockets: dict[str, dict[str, WebSocketThread]] = {}
         self.base_sckt = "wss://stream.binance.com:9443/ws"
         self.stop_event = stop_event
-        engine = create_engine('sqlite:///Cryptos.db', echo=False)
-        Session = sessionmaker(bind=engine)
-        self.session = Session()
-        self.data_loader = data_loader
 
     def get_symbols(self):
         url = "https://api.binance.com/api/v3/exchangeInfo"
@@ -43,6 +37,6 @@ class DataExtractor:
             sub_pairs_list = [pair_A, pair_B, pair_C]
             for sub_pair in sub_pairs_list:
                 endpoint = f"{self.base_sckt}/{sub_pair.lower()}@bookTicker"
-                sub_thread = WebSocketThread(endpoint, sub_pair, pairing, data_loader=self.data_loader)
+                sub_thread = WebSocketThread(endpoint, sub_pair, pairing, data_loader=None)
                 sub_thread.start()
                 parent_pair[sub_pair] = sub_thread

@@ -27,3 +27,5 @@ JOIN (
     GROUP BY 
         parent_pairs.ID
 ) AS SUBQ ON SUBQ.parent_pair_id = P.ID;
+
+remove anomalies greater than 5, and smalle than 0.5
