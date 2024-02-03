@@ -7,3 +7,23 @@ rerun 1 to 3
 figure out all available pairs. load them in a pandas data frame, then update the dataframe in real time, then run analysis
 
 how to keep track of the permutations already made
+
+select * from parent_pairs outerjoin chil
+
+SELECT 
+    SUBQ.sub_pairs_list,
+    P.symbol,
+    P.ID
+FROM 
+    parent_pairs P
+JOIN (
+    SELECT 
+        parent_pairs.ID AS parent_id,
+        STRING_AGG(child_pairs.ID::TEXT, ',') AS sub_pairs_list
+    FROM 
+        parent_pairs
+    LEFT JOIN 
+        child_pairs ON child_pairs.parent_pair_id = parent_pairs.ID
+    GROUP BY 
+        parent_pairs.ID
+) AS SUBQ ON SUBQ.parent_pair_id = P.ID;
