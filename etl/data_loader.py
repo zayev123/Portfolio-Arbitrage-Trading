@@ -5,7 +5,7 @@ from sqlalchemy import func
 import pandas as pd
 from models import ParentPair, ChildPair
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import String
+from sqlalchemy import String, case, cast, literal_column
 import queue
 
 class DataLoader:
@@ -106,29 +106,56 @@ class DataLoader:
     
     def get_latest_data(self):
         self.session.commit()
-        subq = (
-            self.session.query(
-                ParentPair.id.label('parent_id'),
-                func.group_concat(ChildPair.symbol.cast(String), ', ').label('sub_pairs_list'),
-                func.group_concat(ChildPair.best_bid_price.cast(String), ', ').label('best_bid_prices_list'),
-                func.group_concat(ChildPair.best_ask_price.cast(String), ', ').label('best_ask_prices_list')
-            )
-            .outerjoin(ChildPair, ChildPair.parent_pair_id == ParentPair.id)
-            .group_by(ParentPair.id)
-            .subquery()
+        qry = self.session.query(ParentPair)
+        qry = qry.outerjoin(ChildPair, ChildPair.parent_pair_id == ParentPair.id)
+        qry = qry.with_entities(
+            ParentPair.symbol.label("parent_pair"),
+            ChildPair.symbol.label("sub_pair"),
+            ChildPair.best_ask_price.label("ask_price"),
+            ChildPair.best_bid_price.label("bid_price")
         )
+        data = qry.all()
 
-        # Main query
-        qry = (
-            self.session.query(
-                ParentPair.id,
-                ParentPair.symbol.label("assets"),
-                subq.c.sub_pairs_list,
-                subq.c.best_bid_prices_list,
-                subq.c.best_ask_prices_list,
-            )
-            .join(subq, subq.c.parent_id == ParentPair.id)
-        )
+        data_dict = {}
 
-        result = qry.all()
-        return result
+        for (parent_pair, sub_pair, ask_price, bid_price) in data:
+            # print("(parent_pair, sub_pair, ask_price, bid_price)", f"({parent_pair}, {sub_pair}, {ask_price}, {bid_price})")
+            sub_assets = parent_pair.split("-")
+            if parent_pair not in data_dict:
+                data_dict[parent_pair] = {}
+                parent_pair: str = parent_pair
+                parent_dict = data_dict[parent_pair]
+                if len(sub_assets)>=3:
+                    sub_pair_1 = f"{sub_assets[0]}{sub_assets[1]}"
+                    sub_pair_2 = f"{sub_assets[0]}{sub_assets[2]}"
+                    sub_pair_3 = f"{sub_assets[1]}{sub_assets[2]}"
+                    parent_dict[sub_pair_1] = {}
+                    parent_dict[sub_pair_2] = {}
+                    parent_dict[sub_pair_3] = {}
+            parent_dict = data_dict[parent_pair]
+            if len(sub_assets)>=3:
+                parent_dict[sub_pair] = {
+                    "bid_price": bid_price,
+                    "ask_price": ask_price
+                }
+            else:
+                continue
+
+        data_list = []
+        for parent_key, children in data_dict.items():
+            data_row = {}
+            data_row["parent_pair"] = parent_key
+            i = 1
+            for sub_key, sub_data in children.items():
+                bid_price = sub_data.get("bid_price", None)
+                ask_price = sub_data.get("ask_price", None)
+                if not bid_price or not ask_price:
+                    continue
+                data_row[f"sub_pair_{i}"] = sub_key
+                data_row[f"bid_price_{i}"] = bid_price
+                data_row[f"ask_price_{i}"] = ask_price
+                i +=1
+            if i > 3:
+                data_list.append(data_row)
+        
+        return data_list
