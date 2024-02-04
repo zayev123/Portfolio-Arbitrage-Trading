@@ -22,6 +22,7 @@ The process of running either branch is the same:
 2. There are 2 main files in the root folder of the project:
       - main_socket_connector.ipynb
       - main_data_analyser.ipynb
+   
    These are both jupiter notebooks with 2 cell blocks each.
 
 3. first run the main_socket_connector.ipynb notebook (if asked for selecting kernel environment, select xenv)
